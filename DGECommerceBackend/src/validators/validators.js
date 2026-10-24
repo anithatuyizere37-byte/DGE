@@ -62,7 +62,8 @@ function validateProduct(body) {
   if (body.stock === undefined || body.stock === null || !validateStock(body.stock)) {
     errors.push('Stock must be a non-negative integer.');
   }
-  if (!body.imageUrl || body.imageUrl.trim().length < 5) {
+  const finalImage = body.imageUrl || (Array.isArray(body.images) && body.images[0]) || '';
+  if (!finalImage || typeof finalImage !== 'string' || finalImage.trim().length < 5) {
     errors.push('Product image URL is required.');
   }
   return errors;
@@ -82,7 +83,8 @@ function validateOrder(body) {
   if (!body.deliveryAddress || body.deliveryAddress.trim().length < 5) {
     errors.push('Delivery address is required.');
   }
-  if (!body.paymentMethod || !['Cash on Delivery', 'Mobile Money'].includes(body.paymentMethod)) {
+  const pm = body.paymentMethod || '';
+  if (!pm || (!['Cash on Delivery', 'Mobile Money'].includes(pm) && !pm.startsWith('Mobile Money'))) {
     errors.push('Payment method must be "Cash on Delivery" or "Mobile Money".');
   }
   if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {

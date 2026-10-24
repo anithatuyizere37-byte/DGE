@@ -33,13 +33,24 @@ function requireOwner(req, res, next) {
 }
 
 /**
- * Middleware: Require authenticated client (any role)
+ * Middleware: Optional authentication (attaches user if valid token present, allows guest otherwise)
  */
-function requireAuth(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required' });
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return next();
   }
-  next();
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (!err && user) {
+      req.user = user;
+    }
+    next();
+  });
 }
 
-module.exports = { authenticateToken, requireOwner, requireAuth };
+const requireAuth = authenticateToken;
+
+module.exports = { authenticateToken, requireOwner, requireAuth, optionalAuth };

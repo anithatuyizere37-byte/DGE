@@ -298,7 +298,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
               onPress={() =>
                 navigation.navigate('OwnerOrdersTab', {
                   screen: 'OwnerOrderDetails',
-                  params: { orderId: ord.id },
+                  params: { orderId: ord.id, order: ord },
                 })
               }
             >

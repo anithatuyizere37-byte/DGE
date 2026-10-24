@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import COLORS from '../../constants/colors';
 import Header from '../../components/Header';
 import Timeline from '../../components/Timeline';
 import Badge from '../../components/Badge';
-import { useOrders } from '../../context/OrderContext';
+import { useOrders, Order } from '../../context/OrderContext';
 import { useOrderTrackingQuery } from '../../api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../../api/queryClient';
 import { useTranslation } from 'react-i18next';
 
 interface OrderTrackingScreenProps {
@@ -17,20 +19,40 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
   navigation,
   route,
 }) => {
-  const orderId = route?.params?.orderId || '';
-  const { getOrderById } = useOrders();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const orderId = route?.params?.orderId || route?.params?.order?.id || '';
+  const passedOrder: Order | undefined = route?.params?.order;
+  const { getOrderById } = useOrders();
 
   const cachedOrder = getOrderById(orderId);
-  const isFinalStage = cachedOrder?.status === 'delivered' || cachedOrder?.status === 'cancelled';
-  const { data: serverOrder, isRefetching, refetch } = useOrderTrackingQuery(orderId, isFinalStage);
+  const allCachedOrders = queryClient.getQueryData<Order[]>(QUERY_KEYS.orders);
+  const matchedQueryOrder = allCachedOrders?.find((o) => o.id === orderId);
 
-  const order = serverOrder || cachedOrder;
+  const isFinalStage =
+    (passedOrder?.status === 'delivered' || passedOrder?.status === 'cancelled') ||
+    (cachedOrder?.status === 'delivered' || cachedOrder?.status === 'cancelled') ||
+    (matchedQueryOrder?.status === 'delivered' || matchedQueryOrder?.status === 'cancelled');
+
+  const { data: serverOrder, isLoading, isRefetching, refetch } = useOrderTrackingQuery(orderId, isFinalStage);
+
+  const order = serverOrder || passedOrder || matchedQueryOrder || cachedOrder;
+
+  if (isLoading && !order) {
+    return (
+      <View style={styles.container}>
+        <Header showBack onBack={() => navigation.goBack()} title={t('common.loading')} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.blue} />
+        </View>
+      </View>
+    );
+  }
 
   if (!order) {
     return (
       <View style={styles.container}>
-        <Header showBack onBack={() => navigation.goBack()} title="TRACKING NOT FOUND" />
+        <Header showBack onBack={() => navigation.goBack()} title={t('orders.empty')} />
         <View style={styles.notFoundContent}>
           <Text style={styles.notFoundText}>No order record found for #{orderId}</Text>
         </View>
@@ -43,8 +65,8 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
   return (
     <View style={styles.container}>
       <Header
-        title={`TRACKING #${order.id}`}
-        subtitle="Rwamagana Shop Dispatch"
+        title={`#${order.id}`}
+        subtitle={t('common.fulfillmentPipeline')}
         showBack
         onBack={() => navigation.goBack()}
       />
@@ -65,7 +87,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
         {/* Status Card with 5-Stage Timeline */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Fulfillment Timeline</Text>
+            <Text style={styles.cardTitle}>{t('orders.tracking')}</Text>
             <Badge
               label={order.status.toUpperCase()}
               variant={order.status === 'delivered' ? 'yellow' : 'blue'}
@@ -85,38 +107,38 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
 
         {/* Delivery Details */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Delivery Information</Text>
+          <Text style={styles.cardTitle}>{t('checkout.deliveryInfo')}</Text>
           <View style={styles.divider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Recipient Name:</Text>
+            <Text style={styles.infoLabel}>{t('common.recipientName')}</Text>
             <Text style={styles.infoValue}>{order.customerName}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Contact Number:</Text>
+            <Text style={styles.infoLabel}>{t('auth.phoneNumber')}:</Text>
             <Text style={styles.infoValue}>{order.customerPhone}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Delivery Address:</Text>
+            <Text style={styles.infoLabel}>{t('checkout.address')}:</Text>
             <Text style={styles.infoValue}>{order.deliveryAddress}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>District:</Text>
+            <Text style={styles.infoLabel}>{t('checkout.district')}:</Text>
             <Text style={styles.infoValue}>{order.district}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Payment Mode:</Text>
+            <Text style={styles.infoLabel}>{t('checkout.paymentMethod')}:</Text>
             <Text style={styles.infoValue}>{order.paymentMethod}</Text>
           </View>
         </View>
 
         {/* Ordered Items Summary */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ordered Items</Text>
+          <Text style={styles.cardTitle}>{t('common.purchasedItems')}</Text>
           <View style={styles.divider} />
 
           {order.items.map((item, idx) => (
@@ -131,7 +153,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({
           ))}
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Amount:</Text>
+            <Text style={styles.totalLabel}>{t('cart.total')}:</Text>
             <Text style={styles.totalValue}>{order.total.toLocaleString()} RWF</Text>
           </View>
         </View>
@@ -144,6 +166,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollContent: {
     padding: 16,
@@ -200,42 +227,44 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 13,
     color: COLORS.blue,
+    fontWeight: '700',
     flex: 1,
     marginRight: 8,
   },
   itemPrice: {
     fontSize: 13,
-    fontWeight: '700',
     color: COLORS.blue,
+    fontWeight: '900',
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 8,
     paddingTop: 8,
-    borderTopWidth: 1.5,
-    borderTopColor: COLORS.blue,
+    borderTopWidth: 1,
+    borderColor: COLORS.blue,
   },
   totalLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
     color: COLORS.blue,
   },
   totalValue: {
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '900',
     color: COLORS.blue,
   },
   notFoundContent: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
   },
   notFoundText: {
-    fontSize: 16,
-    color: COLORS.blue,
+    fontSize: 15,
     fontWeight: '700',
+    color: COLORS.blue,
+    textAlign: 'center',
   },
 });
 

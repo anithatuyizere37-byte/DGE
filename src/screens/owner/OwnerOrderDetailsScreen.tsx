@@ -13,8 +13,10 @@ import COLORS from '../../constants/colors';
 import Header from '../../components/Header';
 import Badge from '../../components/Badge';
 import Button from '../../components/Button';
-import { useOrders } from '../../context/OrderContext';
+import { useOrders, Order } from '../../context/OrderContext';
 import { useOrderMutations, useOrderTrackingQuery } from '../../api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../../api/queryClient';
 import { OrderStage } from '../../components/Timeline';
 import { useTranslation } from 'react-i18next';
 
@@ -33,9 +35,12 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
   const { getOrderById, updateOrderStatus: updateOrderStatusLocal } = useOrders();
   const { updateOrderStatus: updateOrderStatusMutation } = useOrderMutations();
 
+  const queryClient = useQueryClient();
   const { data: serverOrder, isLoading: isQueryLoading } = useOrderTrackingQuery(orderId);
   const localOrder = getOrderById(orderId);
-  const order = serverOrder || passedOrder || localOrder;
+  const allCachedOrders = queryClient.getQueryData<Order[]>(QUERY_KEYS.orders);
+  const matchedQueryOrder = allCachedOrders?.find((o) => o.id === orderId);
+  const order = serverOrder || passedOrder || matchedQueryOrder || localOrder;
 
   const [selectedNewStatus, setSelectedNewStatus] = useState<OrderStage | 'cancelled' | null>(
     null

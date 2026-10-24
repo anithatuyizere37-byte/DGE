@@ -50,6 +50,18 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    if (existingProduct) {
+      setName(existingProduct.name || '');
+      setDescription(existingProduct.description || '');
+      setCategory(existingProduct.category || validCategories[0] || 'Clothes');
+      setPrice(existingProduct.price !== undefined ? String(existingProduct.price) : '');
+      setStock(existingProduct.stock !== undefined ? String(existingProduct.stock) : '');
+      setImageUrl(existingProduct.imageUrl || '');
+      setSku(existingProduct.sku || '');
+    }
+  }, [existingProduct]);
+
   const handleSubmit = async () => {
     setErrorMsg('');
 
@@ -67,10 +79,14 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
       setErrorMsg('Please enter a valid stock quantity');
       return;
     }
-    if (!description.trim()) {
-      setErrorMsg('Please provide a product description');
+    if (!description.trim() || description.trim().length < 5) {
+      setErrorMsg('Please provide a product description (minimum 5 characters)');
       return;
     }
+
+    const finalImageUrl =
+      imageUrl.trim() ||
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80';
 
     setLoading(true);
 
@@ -82,15 +98,18 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           category,
           price: numPrice,
           stock: numStock,
-          imageUrl,
-          sku: sku.trim(),
+          imageUrl: finalImageUrl,
+          sku: sku.trim() || existingProduct.sku || `DG-${category.substring(0, 3).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`,
+          isFeatured: existingProduct.isFeatured ?? false,
+          isNewArrival: existingProduct.isNewArrival ?? false,
+          isBestSeller: existingProduct.isBestSeller ?? false,
         };
-        // Optimistic cache update
+        // Optimistic cache update with strict number comparison
         queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
-          old ? old.map((p) => (p.id === existingProduct.id ? { ...p, ...updates } : p)) : []
+          old ? old.map((p) => (Number(p.id) === Number(existingProduct.id) ? { ...p, ...updates } : p)) : []
         );
         queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
-          old ? old.map((p) => (p.id === existingProduct.id ? { ...p, ...updates } : p)) : []
+          old ? old.map((p) => (Number(p.id) === Number(existingProduct.id) ? { ...p, ...updates } : p)) : []
         );
         await updateProduct(existingProduct.id, updates);
         try {
@@ -105,7 +124,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           category,
           price: numPrice,
           stock: numStock,
-          imageUrl,
+          imageUrl: finalImageUrl,
           sku: sku.trim() || `DG-${category.substring(0, 3).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`,
           isFeatured: false,
           isNewArrival: true,

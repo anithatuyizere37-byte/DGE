@@ -104,6 +104,8 @@ async function createProduct(req, res) {
       return res.status(400).json({ message: errors.join(' ') });
     }
 
+    const finalImageUrl = (imageUrl && imageUrl.trim()) || (Array.isArray(req.body.images) && req.body.images[0]) || '';
+
     const result = await db.query(
       `INSERT INTO products (name, description, price, stock, category, image_url, sku, is_featured, is_new_arrival, is_best_seller)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -115,7 +117,7 @@ async function createProduct(req, res) {
         Number(price),
         Number(stock),
         category.trim(),
-        imageUrl.trim(),
+        finalImageUrl,
         sku || null,
         !!isFeatured,
         !!isNewArrival,
@@ -143,6 +145,8 @@ async function updateProduct(req, res) {
       return res.status(400).json({ message: errors.join(' ') });
     }
 
+    const finalImageUrl = (imageUrl && imageUrl.trim()) || (Array.isArray(req.body.images) && req.body.images[0]) || '';
+
     const result = await db.query(
       `UPDATE products SET name=$1, description=$2, price=$3, stock=$4, category=$5,
        image_url=$6, sku=$7, is_featured=$8, is_new_arrival=$9, is_best_seller=$10
@@ -151,7 +155,7 @@ async function updateProduct(req, res) {
                  is_featured AS "isFeatured", is_new_arrival AS "isNewArrival", is_best_seller AS "isBestSeller"`,
       [
         name.trim(), description.trim(), Number(price), Number(stock),
-        category.trim(), imageUrl.trim(), sku || null,
+        category.trim(), finalImageUrl, sku || null,
         !!isFeatured, !!isNewArrival, !!isBestSeller, id
       ]
     );

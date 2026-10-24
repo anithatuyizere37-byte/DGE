@@ -6,7 +6,8 @@ const { validateOrder } = require('../validators/validators');
  */
 function generateOrderId(count) {
   const year = new Date().getFullYear();
-  return `DG-ORD-${year}-${String(count + 1).padStart(3, '0')}`;
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `DG-ORD-${year}-${String(count + 1).padStart(3, '0')}-${rand}`;
 }
 
 /**
@@ -23,7 +24,6 @@ async function createOrder(req, res) {
 
     const errors = validateOrder(req.body);
     if (errors.length > 0) {
-      client.release();
       return res.status(400).json({ message: errors.join(' ') });
     }
 
@@ -60,14 +60,12 @@ async function createOrder(req, res) {
       const stockCheck = await client.query('SELECT stock, price, name FROM products WHERE id = $1 FOR UPDATE', [prodId]);
       if (stockCheck.rows.length === 0) {
         await client.query('ROLLBACK');
-        client.release();
         return res.status(400).json({ message: `Product ${item.name} is no longer available in catalog.` });
       }
 
       const availableStock = stockCheck.rows[0].stock;
       if (availableStock < Number(item.quantity)) {
         await client.query('ROLLBACK');
-        client.release();
         return res.status(400).json({
           message: `Insufficient stock for ${stockCheck.rows[0].name}. Only ${availableStock} units remaining in Rwamagana store.`,
         });
@@ -95,8 +93,8 @@ async function createOrder(req, res) {
 
     await client.query('COMMIT');
 
-    // Fetch the complete order to return
-    const orderResult = await db.query(
+    // Fetch the complete order to return using the active client
+    const orderResult = await client.query(
       `SELECT id, user_id AS "userId", customer_name AS "customerName",
               customer_phone AS "customerPhone", delivery_address AS "deliveryAddress",
               district, payment_method AS "paymentMethod", payment_status AS "paymentStatus",
@@ -105,7 +103,7 @@ async function createOrder(req, res) {
       [orderId]
     );
 
-    const itemsResult = await db.query(
+    const itemsResult = await client.query(
       `SELECT product_id AS "productId", name, price, quantity FROM order_items WHERE order_id = $1`,
       [orderId]
     );
@@ -115,7 +113,9 @@ async function createOrder(req, res) {
       items: itemsResult.rows,
     });
   } catch (err) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (_) {}
     console.error('CreateOrder error:', err);
     return res.status(500).json({ message: 'Failed to create order. Please try again.' });
   } finally {
@@ -178,7 +178,7 @@ async function getOrders(req, res) {
 async function getOrderById(req, res) {
   try {
     const { id } = req.params;
-    const isOwner = req.user.role === 'owner';
+    const isOwner = Boolean(req.user && req.user.role === 'owner');
 
     const result = await db.query(
       `SELECT o.id, o.user_id AS "userId", o.customer_name AS "customerName",
@@ -195,8 +195,8 @@ async function getOrderById(req, res) {
 
     const order = result.rows[0];
 
-    // Clients can only view their own orders
-    if (!isOwner && order.userId !== req.user.id) {
+    // Authenticated non-owner clients can only view their own orders
+    if (req.user && !isOwner && order.userId && order.userId !== req.user.id) {
       return res.status(403).json({ message: 'Access denied.' });
     }
 
