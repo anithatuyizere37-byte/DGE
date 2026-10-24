@@ -182,17 +182,22 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     fetchProducts();
   }, []);
 
-  const addProduct = async (prod: Omit<Product, 'id'>): Promise<boolean> => {
+  const addProduct = async (prod: Omit<Product, 'id'> | Product): Promise<boolean> => {
+    const existingId = (prod as any).id;
+    if (existingId) {
+      setProducts((prev) => [prod as Product, ...prev.filter((p) => p.id !== existingId)]);
+      return true;
+    }
     try {
       const res = await apiClient.post('/products', prod);
       if (res.data) {
-        setProducts((prev) => [res.data, ...prev]);
+        setProducts((prev) => [res.data, ...prev.filter((p) => p.id !== res.data.id)]);
         return true;
       }
     } catch (e) {
       // Local optimistic add
       const newId = Math.max(...products.map((p) => p.id), 0) + 1;
-      const newProduct: Product = { ...prod, id: newId };
+      const newProduct: Product = { ...(prod as Product), id: newId };
       setProducts((prev) => [newProduct, ...prev]);
       return true;
     }
@@ -200,11 +205,6 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateProduct = async (id: number, updates: Partial<Product>): Promise<boolean> => {
-    try {
-      await apiClient.put(`/products/${id}`, updates);
-    } catch (e) {
-      console.log('Updating product locally');
-    }
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
     );
@@ -212,11 +212,6 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteProduct = async (id: number): Promise<boolean> => {
-    try {
-      await apiClient.delete(`/products/${id}`);
-    } catch (e) {
-      console.log('Deleting product locally');
-    }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     return true;
   };

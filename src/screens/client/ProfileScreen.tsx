@@ -44,7 +44,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     <View style={styles.container}>
       <Header
         title={t('profile.title').toUpperCase()}
-        subtitle="D&G Customer Account"
+        subtitle={t('common.customerAccount')}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -57,10 +57,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>
-              {user?.fullName || 'Guest Shopper'}
+              {user?.fullName || t('common.guestShopper')}
             </Text>
             <Text style={styles.userEmail}>
-              {user?.email || 'Browsing Rwamagana Retail Shop'}
+              {user?.email || t('common.guestBrowsing')}
             </Text>
             {user?.phoneNumber ? (
               <Text style={styles.userPhone}>{user.phoneNumber}</Text>
@@ -101,7 +101,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.menuLabelWrapper}>
               <Text style={styles.menuLabel}>{t('nav.orders')}</Text>
-              <Text style={styles.menuValue}>View your previous order history</Text>
+              <Text style={styles.menuValue}>{t('common.orderHistorySubtitle')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={COLORS.blue} />
           </TouchableOpacity>
@@ -117,7 +117,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.menuLabelWrapper}>
               <Text style={styles.menuLabel}>{t('profile.addresses')}</Text>
-              <Text style={styles.menuValue}>Rwamagana, Rwanda</Text>
+              <Text style={styles.menuValue}>{t('common.location')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={COLORS.blue} />
           </TouchableOpacity>
@@ -126,16 +126,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         {/* Information Section */}
         <View style={styles.menuCard}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoTitle}>About D&G E-Commerce</Text>
+            <Text style={styles.infoTitle}>{t('common.aboutTitle')}</Text>
             <Text style={styles.infoDesc}>
-              A single premier retail shop located in Rwamagana, Eastern Province, Rwanda. Offering fine fashion, footwear, luggage, kitchen equipment, jewelry, and cosmetics.
+              {t('common.aboutText')}
             </Text>
           </View>
           <View style={styles.menuDivider} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoTitle}>Contact & Helpdesk</Text>
+            <Text style={styles.infoTitle}>{t('common.contactHelpdesk')}</Text>
             <Text style={styles.infoDesc}>
-              Phone: +250 788 000 000 • Email: support@dgecommerce.rw
+              {t('common.contactText')}
             </Text>
           </View>
         </View>
@@ -144,14 +144,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         {!user ? (
           <View style={{ gap: 10, marginTop: 8 }}>
             <Button
-              title="Sign In to Your Account"
+              title={t('auth.login')}
               variant="primary"
               size="large"
               onPress={() => navigation.navigate('Login')}
               style={styles.logoutBtn}
             />
             <Button
-              title="Create New Account"
+              title={t('auth.register')}
               variant="accent"
               size="large"
               onPress={() => navigation.navigate('Register')}

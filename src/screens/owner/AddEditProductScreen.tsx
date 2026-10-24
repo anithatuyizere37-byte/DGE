@@ -15,6 +15,9 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { useProducts, Product } from '../../context/ProductContext';
 import { useProductMutations } from '../../api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../../api/queryClient';
+import { useTranslation } from 'react-i18next';
 
 interface AddEditProductScreenProps {
   navigation: any;
@@ -25,6 +28,8 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
   navigation,
   route,
 }) => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const existingProduct: Product | undefined = route.params?.product;
   const isEditing = !!existingProduct;
 
@@ -80,12 +85,19 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           imageUrl,
           sku: sku.trim(),
         };
+        // Optimistic cache update
+        queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+          old ? old.map((p) => (p.id === existingProduct.id ? { ...p, ...updates } : p)) : []
+        );
+        queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+          old ? old.map((p) => (p.id === existingProduct.id ? { ...p, ...updates } : p)) : []
+        );
+        await updateProduct(existingProduct.id, updates);
         try {
           await updateMutation.mutateAsync({ id: existingProduct.id, updates });
         } catch (e) {
           console.log('Server update fallback to local');
         }
-        await updateProduct(existingProduct.id, updates);
       } else {
         const newProduct = {
           name: name.trim(),
@@ -99,16 +111,17 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           isNewArrival: true,
           isBestSeller: false,
         };
+        let createdProd: any = null;
         try {
-          await createMutation.mutateAsync(newProduct);
+          createdProd = await createMutation.mutateAsync(newProduct);
         } catch (e) {
           console.log('Server create fallback to local');
         }
-        await addProduct(newProduct);
+        await addProduct(createdProd || newProduct);
       }
+      navigation.goBack();
     } finally {
       setLoading(false);
-      navigation.goBack();
     }
   };
 
@@ -119,15 +132,15 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
     >
       <View style={styles.container}>
         <Header
-          title={isEditing ? 'EDIT PRODUCT' : 'ADD NEW PRODUCT'}
-          subtitle="D&G Inventory"
+          title={isEditing ? t('owner.editProduct').toUpperCase() : t('owner.addProduct').toUpperCase()}
+          subtitle={t('common.manageCatalog')}
           showBack
           onBack={() => navigation.goBack()}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Input
-            label="Product Name"
+            label={t('owner.productName')}
             placeholder="e.g. Leather Oxford Shoes"
             value={name}
             onChangeText={setName}
@@ -135,7 +148,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
 
           {/* Category Picker */}
           <View style={styles.categoryPickerSection}>
-            <Text style={styles.fieldLabel}>Department / Category</Text>
+            <Text style={styles.fieldLabel}>{t('owner.category')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
               {validCategories.map((cat) => (
                 <TouchableOpacity
@@ -152,7 +165,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
                       category === cat && styles.catPillTextActive,
                     ]}
                   >
-                    {cat}
+                    {t(`categories.${cat}` as any, cat)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -160,7 +173,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           </View>
 
           <Input
-            label="Price (RWF)"
+            label={t('owner.priceRwf')}
             placeholder="e.g. 25000"
             value={price}
             onChangeText={setPrice}
@@ -168,7 +181,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           />
 
           <Input
-            label="Initial Stock Quantity"
+            label={t('owner.stockQty')}
             placeholder="e.g. 15"
             value={stock}
             onChangeText={setStock}
@@ -190,7 +203,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           />
 
           <Input
-            label="Description"
+            label={t('owner.description')}
             placeholder="Detailed product information for customers..."
             value={description}
             onChangeText={setDescription}
@@ -209,7 +222,7 @@ export const AddEditProductScreen: React.FC<AddEditProductScreenProps> = ({
           ) : null}
 
           <Button
-            title={isEditing ? 'Save Changes' : 'Publish Product to Shop'}
+            title={isEditing ? t('common.save') : t('common.save') === 'Bika' ? 'Tangaza Igicuruzwa' : t('common.save') === 'Enregistrer' ? 'Publier le Produit' : 'Publish Product to Shop'}
             variant="primary"
             size="large"
             loading={loading}

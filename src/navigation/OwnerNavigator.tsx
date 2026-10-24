@@ -3,7 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 // Owner Screens
 import OwnerDashboardScreen from '../screens/owner/OwnerDashboardScreen';
@@ -37,12 +39,14 @@ function OwnerOrdersStackNavigator() {
 }
 
 export const OwnerNavigator: React.FC = () => {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       initialRouteName="OwnerDashboardTab"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { paddingBottom: Math.max(insets.bottom, 6) + 6, height: 60 + Math.max(insets.bottom, 0) }],
         tabBarActiveTintColor: COLORS.blue,
         tabBarInactiveTintColor: COLORS.blue,
         tabBarLabelStyle: styles.tabLabel,
@@ -74,27 +78,27 @@ export const OwnerNavigator: React.FC = () => {
       <Tab.Screen
         name="OwnerDashboardTab"
         component={OwnerDashboardScreen}
-        options={{ tabBarLabel: 'Dashboard' }}
+        options={{ tabBarLabel: t('nav.dashboard') }}
       />
       <Tab.Screen
         name="OwnerProductsTab"
         component={OwnerProductsStackNavigator}
-        options={{ tabBarLabel: 'Products' }}
+        options={{ tabBarLabel: t('nav.products') }}
       />
       <Tab.Screen
         name="OwnerInventoryTab"
         component={OwnerInventoryScreen}
-        options={{ tabBarLabel: 'Inventory' }}
+        options={{ tabBarLabel: t('nav.inventory') }}
       />
       <Tab.Screen
         name="OwnerOrdersTab"
         component={OwnerOrdersStackNavigator}
-        options={{ tabBarLabel: 'Orders' }}
+        options={{ tabBarLabel: t('nav.orders') }}
       />
       <Tab.Screen
         name="OwnerReportsTab"
         component={OwnerReportsScreen}
-        options={{ tabBarLabel: 'Reports' }}
+        options={{ tabBarLabel: t('nav.reports') }}
       />
     </Tab.Navigator>
   );
@@ -102,11 +106,9 @@ export const OwnerNavigator: React.FC = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 64,
     backgroundColor: COLORS.white,
     borderTopWidth: 2,
     borderTopColor: COLORS.blue,
-    paddingBottom: 6,
     paddingTop: 6,
   },
   tabLabel: {

@@ -103,7 +103,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.warn('Failed to load orders from storage');
       }
     };
-    loadOrders();
+    loadOrders().then(() => {
+      refreshOrders();
+    });
   }, []);
 
   const saveOrders = (updated: Order[]) => {

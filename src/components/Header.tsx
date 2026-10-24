@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import COLORS from '../constants/colors';
 
@@ -26,8 +27,10 @@ export const Header: React.FC<HeaderProps> = ({
   rightAction,
   style,
 }) => {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { paddingTop: insets.top + 10 }, style]}>
       <View style={styles.left}>
         {showBack && onBack ? (
           <TouchableOpacity
@@ -35,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
             onPress={onBack}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={24} color={COLORS.white} />
+            <Ionicons name="chevron-back" size={24} color={COLORS.blue} />
           </TouchableOpacity>
         ) : (
           <View style={styles.logoBadge}>
@@ -82,7 +85,6 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    height: 64,
     backgroundColor: COLORS.white,
     borderBottomWidth: 2,
     borderBottomColor: COLORS.blue,
@@ -90,6 +92,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingBottom: 10,
   },
   left: {
     flexDirection: 'row',
@@ -124,12 +127,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 10,
   },
-  backIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.blue,
-    lineHeight: 26,
-  },
   titleWrapper: {
     flex: 1,
   },
@@ -160,9 +157,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-  },
-  cartIconText: {
-    fontSize: 20,
   },
   cartBadge: {
     position: 'absolute',

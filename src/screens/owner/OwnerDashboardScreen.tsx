@@ -18,6 +18,7 @@ import { useProducts } from '../../context/ProductContext';
 import { useOrders } from '../../context/OrderContext';
 import { useAuth } from '../../context/AuthContext';
 import { useSellerInventoryQuery, useOrdersQuery } from '../../api/queries';
+import { useTranslation } from 'react-i18next';
 
 interface OwnerDashboardScreenProps {
   navigation: any;
@@ -26,6 +27,7 @@ interface OwnerDashboardScreenProps {
 export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
   navigation,
 }) => {
+  const { t } = useTranslation();
   const { products: localProducts } = useProducts();
   const { orders: localOrders } = useOrders();
   const { logout } = useAuth();
@@ -83,14 +85,14 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
   return (
     <View style={styles.container}>
       <Header
-        title="OWNER DASHBOARD"
-        subtitle="D&G Rwamagana Retail Management"
+        title={t('owner.dashboardTitle').toUpperCase()}
+        subtitle={t('common.singleStoreOps')}
         rightAction={
           <TouchableOpacity
             style={styles.headerLogoutBtn}
             onPress={logout}
           >
-            <Text style={styles.headerLogoutText}>Logout</Text>
+            <Text style={styles.headerLogoutText}>{t('auth.logout')}</Text>
           </TouchableOpacity>
         }
       />
@@ -113,14 +115,14 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
             {/* Welcome & Shop Status Header */}
             <View style={styles.storeStatusBanner}>
               <View>
-                <Text style={styles.storeStatusTitle}>D&G Single Store Operations</Text>
+                <Text style={styles.storeStatusTitle}>{t('common.singleStoreOps')}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                   <Ionicons name="location-sharp" size={13} color={COLORS.blue} style={{ marginRight: 3 }} />
-                  <Text style={styles.storeStatusLocation}>Rwamagana, Eastern Province</Text>
+                  <Text style={styles.storeStatusLocation}>{t('common.location')}</Text>
                 </View>
               </View>
               <View style={styles.storeBadge}>
-                <Text style={styles.storeBadgeText}>SHOP OPEN</Text>
+                <Text style={styles.storeBadgeText}>{t('common.shopOpen')}</Text>
               </View>
             </View>
 
@@ -141,7 +143,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
                   dateFilter === tab && styles.filterTabTextActive,
                 ]}
               >
-                {tab === 'today' ? 'Today' : tab === '7days' ? 'Last 7 Days' : 'Last 30 Days'}
+                {tab === 'today' ? t('common.today') : tab === '7days' ? t('common.last7Days') : t('common.last30Days')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -149,7 +151,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
 
         {/* Quick Management Actions (CRUD Shortcuts) */}
         <View style={styles.quickActionsContainer}>
-          <Text style={styles.quickActionsTitle}>MANAGEMENT & CRUD ACTIONS</Text>
+          <Text style={styles.quickActionsTitle}>{t('common.managementActionsTitle')}</Text>
           <View style={styles.quickActionsRow}>
             <TouchableOpacity
               style={styles.quickActionBtn}
@@ -162,7 +164,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
               <View style={styles.quickActionIconWrap}>
                 <Ionicons name="add-circle" size={24} color={COLORS.blue} />
               </View>
-              <Text style={styles.quickActionLabel}>Add Product</Text>
+              <Text style={styles.quickActionLabel}>{t('owner.addProduct')}</Text>
               <Text style={styles.quickActionSub}>Create new</Text>
             </TouchableOpacity>
 
@@ -177,7 +179,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
               <View style={styles.quickActionIconWrap}>
                 <Ionicons name="pricetags" size={22} color={COLORS.blue} />
               </View>
-              <Text style={styles.quickActionLabel}>Edit Catalog</Text>
+              <Text style={styles.quickActionLabel}>{t('common.editCatalog')}</Text>
               <Text style={styles.quickActionSub}>Update & delete</Text>
             </TouchableOpacity>
 
@@ -188,7 +190,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
               <View style={styles.quickActionIconWrap}>
                 <Ionicons name="cube" size={22} color={COLORS.blue} />
               </View>
-              <Text style={styles.quickActionLabel}>Adjust Stock</Text>
+              <Text style={styles.quickActionLabel}>{t('common.adjustStock')}</Text>
               <Text style={styles.quickActionSub}>Quick ± inventory</Text>
             </TouchableOpacity>
 
@@ -199,7 +201,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
               <View style={styles.quickActionIconWrap}>
                 <Ionicons name="receipt" size={22} color={COLORS.blue} />
               </View>
-              <Text style={styles.quickActionLabel}>Update Orders</Text>
+              <Text style={styles.quickActionLabel}>{t('common.updateOrders')}</Text>
               <Text style={styles.quickActionSub}>Delivery stages</Text>
             </TouchableOpacity>
           </View>
@@ -209,7 +211,7 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
         <View style={styles.metricsGrid}>
           {/* Total Revenue */}
           <View style={styles.primaryMetricCard}>
-            <Text style={styles.primaryMetricLabel}>Total Revenue (RWF)</Text>
+            <Text style={styles.primaryMetricLabel}>{t('owner.totalSales')}</Text>
             <Text style={styles.primaryMetricValue}>
               {totalSales.toLocaleString()} RWF
             </Text>
@@ -218,13 +220,13 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
 
           {/* Orders Breakdown */}
           <View style={styles.metricHalfCard}>
-            <Text style={styles.metricLabel}>Total Orders</Text>
+            <Text style={styles.metricLabel}>{t('owner.totalOrders')}</Text>
             <Text style={styles.metricValue}>{totalOrdersCount}</Text>
             <Text style={styles.metricSubtext}>{deliveredOrders} fulfilled</Text>
           </View>
 
           <View style={styles.metricHalfCard}>
-            <Text style={styles.metricLabel}>Pending Action</Text>
+            <Text style={styles.metricLabel}>{t('owner.pendingOrders')}</Text>
             <Text style={[styles.metricValue, { color: COLORS.blue }]}>
               {pendingOrders}
             </Text>
@@ -233,18 +235,18 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
 
           {/* Inventory Health */}
           <View style={styles.metricHalfCard}>
-            <Text style={styles.metricLabel}>Products in Catalog</Text>
+            <Text style={styles.metricLabel}>{t('nav.products')}</Text>
             <Text style={styles.metricValue}>{products.length}</Text>
             <Text style={styles.metricSubtext}>6 Active categories</Text>
           </View>
 
           <View style={[styles.metricHalfCard, styles.alertHalfCard]}>
-            <Text style={styles.alertMetricLabel}>Stock Warnings</Text>
+            <Text style={styles.alertMetricLabel}>{t('common.stockWarnings')}</Text>
             <Text style={styles.alertMetricValue}>
               {lowStockProducts.length + outOfStockProducts.length}
             </Text>
             <Text style={styles.alertMetricSubtext}>
-              {outOfStockProducts.length} out of stock
+              {outOfStockProducts.length} {t('home.outOfStock')}
             </Text>
           </View>
         </View>
@@ -261,12 +263,12 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
             <View style={styles.alertHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="alert-circle" size={16} color={COLORS.blue} style={{ marginRight: 6 }} />
-                <Text style={styles.alertTitle}>Immediate Restock Needed</Text>
+                <Text style={styles.alertTitle}>{t('common.immediateRestock')}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => navigation.navigate('OwnerInventoryTab')}
               >
-                <Text style={styles.alertAction}>Manage Stock ›</Text>
+                <Text style={styles.alertAction}>{t('common.manageStock')}</Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.alertDesc}>
@@ -281,11 +283,11 @@ export const OwnerDashboardScreen: React.FC<OwnerDashboardScreenProps> = ({
         {/* Recent Orders Overview */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Customer Orders</Text>
+            <Text style={styles.sectionTitle}>{t('common.recentOrdersTitle')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('OwnerOrdersTab')}
             >
-              <Text style={styles.sectionLink}>View All ›</Text>
+              <Text style={styles.sectionLink}>{t('common.viewAllOrders')}</Text>
             </TouchableOpacity>
           </View>
 

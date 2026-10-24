@@ -14,8 +14,13 @@ import Badge from '../../components/Badge';
 import { ProductListSkeleton } from '../../components/Skeleton';
 import { useProducts, Product } from '../../context/ProductContext';
 import { useSellerInventoryQuery, useProductMutations } from '../../api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../../api/queryClient';
+import { useTranslation } from 'react-i18next';
 
 export const OwnerInventoryScreen: React.FC = () => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { products: localProducts, updateProduct: updateProductLocal } = useProducts();
   const { data: serverProducts, isLoading, isRefetching, refetch } = useSellerInventoryQuery();
   const { updateStock } = useProductMutations();
@@ -35,8 +40,15 @@ export const OwnerInventoryScreen: React.FC = () => {
 
   const adjustStock = (product: Product, delta: number) => {
     const newStock = Math.max(0, product.stock + delta);
-    updateStock.mutate({ id: product.id, stock: newStock });
+    // Instant local cache updates
+    queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+      old ? old.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p)) : []
+    );
+    queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+      old ? old.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p)) : []
+    );
     updateProductLocal(product.id, { stock: newStock });
+    updateStock.mutate({ id: product.id, stock: newStock });
   };
 
   const renderInventoryItem = ({ item }: { item: Product }) => {
@@ -50,7 +62,7 @@ export const OwnerInventoryScreen: React.FC = () => {
           <View style={styles.topRow}>
             <Text style={styles.category}>{item.category}</Text>
             <Badge
-              label={isOut ? 'OUT OF STOCK' : isLow ? 'LOW STOCK' : 'IN STOCK'}
+              label={isOut ? t('home.outOfStock').toUpperCase() : isLow ? t('common.stockWarnings').toUpperCase() : t('home.inStock').toUpperCase()}
               variant={isOut ? 'outline' : 'yellow'}
               size="small"
             />
@@ -62,7 +74,7 @@ export const OwnerInventoryScreen: React.FC = () => {
 
           {/* Quick Stock Controls */}
           <View style={styles.stockControlRow}>
-            <Text style={styles.stockLabel}>Units in Store:</Text>
+            <Text style={styles.stockLabel}>{t('common.unitsInStore')}</Text>
             <View style={styles.stepperContainer}>
               <TouchableOpacity
                 style={styles.stepperBtn}
@@ -87,7 +99,10 @@ export const OwnerInventoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Header title="INVENTORY MANAGEMENT" subtitle="Stock Levels in Rwamagana" />
+      <Header
+        title={t('common.inventoryManagement')}
+        subtitle={t('common.stockLevelsSubtitle')}
+      />
 
       {/* Summary Cards */}
       <View style={styles.summaryBar}>
@@ -95,7 +110,7 @@ export const OwnerInventoryScreen: React.FC = () => {
           style={[styles.summaryPill, filter === 'all' && styles.summaryPillActive]}
           onPress={() => setFilter('all')}
         >
-          <Text style={styles.summaryPillTitle}>Total Catalog</Text>
+          <Text style={styles.summaryPillTitle}>{t('common.all')}</Text>
           <Text style={styles.summaryPillValue}>{products.length}</Text>
         </TouchableOpacity>
 
@@ -103,7 +118,7 @@ export const OwnerInventoryScreen: React.FC = () => {
           style={[styles.summaryPill, filter === 'low' && styles.summaryPillActive]}
           onPress={() => setFilter('low')}
         >
-          <Text style={styles.summaryPillTitle}>Low Stock (≤5)</Text>
+          <Text style={styles.summaryPillTitle}>≤ 5</Text>
           <Text style={styles.summaryPillValue}>{lowStock.length}</Text>
         </TouchableOpacity>
 
@@ -111,7 +126,7 @@ export const OwnerInventoryScreen: React.FC = () => {
           style={[styles.summaryPill, filter === 'out' && styles.summaryPillActive]}
           onPress={() => setFilter('out')}
         >
-          <Text style={styles.summaryPillTitle}>Out of Stock</Text>
+          <Text style={styles.summaryPillTitle}>{t('home.outOfStock')}</Text>
           <Text style={styles.summaryPillValue}>{outOfStock.length}</Text>
         </TouchableOpacity>
       </View>
@@ -136,7 +151,7 @@ export const OwnerInventoryScreen: React.FC = () => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No items matching selected inventory filter.</Text>
+              <Text style={styles.emptyText}>{t('orders.empty')}</Text>
             </View>
           }
         />
@@ -152,10 +167,10 @@ const styles = StyleSheet.create({
   },
   summaryBar: {
     flexDirection: 'row',
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.white,
     gap: 8,
-    borderBottomWidth: 1.5,
-    borderBottomColor: COLORS.blue,
   },
   summaryPill: {
     flex: 1,
@@ -163,7 +178,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.blue,
     borderWidth: 1.5,
     borderRadius: 8,
-    padding: 8,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   summaryPillActive: {
@@ -172,19 +187,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   summaryPillTitle: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
     color: COLORS.blue,
-    textTransform: 'uppercase',
+    fontWeight: '700',
   },
   summaryPillValue: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 14,
     color: COLORS.blue,
+    fontWeight: '900',
     marginTop: 2,
   },
   listContent: {
-    padding: 14,
+    paddingHorizontal: 14,
     paddingBottom: 30,
   },
   itemCard: {
@@ -194,15 +208,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 12,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   itemCardOut: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.blue,
+    opacity: 0.7,
   },
   image: {
-    width: 80,
-    height: 80,
+    width: 75,
+    height: 75,
     borderRadius: 8,
     backgroundColor: COLORS.white,
     borderColor: COLORS.blue,
@@ -220,20 +233,21 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 10,
-    fontWeight: '800',
     color: COLORS.blue,
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
   productName: {
     fontSize: 13,
     fontWeight: '800',
     color: COLORS.blue,
-    marginVertical: 2,
+    marginTop: 2,
   },
   price: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
     color: COLORS.blue,
+    marginTop: 2,
   },
   stockControlRow: {
     flexDirection: 'row',
@@ -243,38 +257,41 @@ const styles = StyleSheet.create({
   },
   stockLabel: {
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.blue,
+    fontWeight: '700',
   },
   stepperContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
     borderColor: COLORS.blue,
+    borderWidth: 1.5,
     borderRadius: 6,
-    backgroundColor: COLORS.white,
+    overflow: 'hidden',
   },
   stepperBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: COLORS.yellow,
+    width: 28,
+    height: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stepperBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: COLORS.blue,
   },
   stockCount: {
-    fontSize: 13,
+    paddingHorizontal: 10,
+    fontSize: 12,
     fontWeight: '900',
     color: COLORS.blue,
-    paddingHorizontal: 6,
   },
   emptyContainer: {
+    padding: 40,
     alignItems: 'center',
-    paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.blue,
     fontWeight: '700',
   },

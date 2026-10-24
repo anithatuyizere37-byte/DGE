@@ -151,8 +151,14 @@ export function useProductMutations() {
       const res = await apiClient.post('/products', newProduct);
       return res.data;
     },
-    onSuccess: () => {
-      // Invalidate product catalog & seller inventory
+    onSuccess: (data: Product) => {
+      // Immediately inject created product into cache
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? [data, ...old.filter((p) => p.id !== data.id)] : [data]
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? [data, ...old.filter((p) => p.id !== data.id)] : [data]
+      );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sellerInventory });
     },
@@ -163,9 +169,16 @@ export function useProductMutations() {
       const res = await apiClient.put(`/products/${id}`, updates);
       return res.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data: Product, variables) => {
+      const updatedItem = data?.id ? data : { id: variables.id, ...variables.updates };
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? old.map((p) => (p.id === variables.id ? { ...p, ...updatedItem } : p)) : []
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? old.map((p) => (p.id === variables.id ? { ...p, ...updatedItem } : p)) : []
+      );
+      queryClient.setQueryData(QUERY_KEYS.product(variables.id), updatedItem);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.product(variables.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sellerInventory });
     },
   });
@@ -175,9 +188,24 @@ export function useProductMutations() {
       const res = await apiClient.patch(`/products/${id}/stock`, { stock });
       return res.data;
     },
-    onSuccess: (_, variables) => {
+    onMutate: async ({ id, stock }) => {
+      // Immediate optimistic update for 0ms lag
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? old.map((p) => (p.id === id ? { ...p, stock } : p)) : []
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? old.map((p) => (p.id === id ? { ...p, stock } : p)) : []
+      );
+    },
+    onSuccess: (data: any, variables) => {
+      const stock = data?.stock !== undefined ? data.stock : variables.stock;
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? old.map((p) => (p.id === variables.id ? { ...p, stock } : p)) : []
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? old.map((p) => (p.id === variables.id ? { ...p, stock } : p)) : []
+      );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.product(variables.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sellerInventory });
     },
   });
@@ -187,7 +215,22 @@ export function useProductMutations() {
       const res = await apiClient.delete(`/products/${id}`);
       return res.data;
     },
-    onSuccess: () => {
+    onMutate: async (id: number) => {
+      // Immediately remove from cache
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? old.filter((p) => p.id !== id) : []
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? old.filter((p) => p.id !== id) : []
+      );
+    },
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? old.filter((p) => p.id !== id) : []
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? old.filter((p) => p.id !== id) : []
+      );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sellerInventory });
     },
@@ -213,7 +256,9 @@ export function useOrderMutations() {
       return res.data;
     },
     onSuccess: (data) => {
-      // Invalidate customer orders, products (as stock decremented), and seller inventory
+      queryClient.setQueryData<Order[]>(QUERY_KEYS.orders, (old) =>
+        old ? [data, ...old.filter((o) => o.id !== data.id)] : [data]
+      );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.orders });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.sellerInventory });
@@ -228,8 +273,47 @@ export function useOrderMutations() {
       const res = await apiClient.put(`/orders/${orderId}/status`, { status });
       return res.data;
     },
-    onSuccess: (_, variables) => {
-      // Invalidate orders list and the specific order tracking query
+    onMutate: async ({ orderId, status }) => {
+      const isDelivered = status === 'delivered';
+      queryClient.setQueryData<Order[]>(QUERY_KEYS.orders, (old) =>
+        old
+          ? old.map((o) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    status: status as any,
+                    ...(isDelivered ? { paymentStatus: 'Paid' as const } : {}),
+                  }
+                : o
+            )
+          : []
+      );
+      queryClient.setQueryData<Order>(QUERY_KEYS.order(orderId), (old) =>
+        old
+          ? {
+              ...old,
+              status: status as any,
+              ...(isDelivered ? { paymentStatus: 'Paid' as const } : {}),
+            }
+          : (old as any)
+      );
+    },
+    onSuccess: (data: any, variables) => {
+      const status = data?.status || variables.status;
+      const isDelivered = status === 'delivered';
+      queryClient.setQueryData<Order[]>(QUERY_KEYS.orders, (old) =>
+        old
+          ? old.map((o) =>
+              o.id === variables.orderId
+                ? {
+                    ...o,
+                    status,
+                    ...(isDelivered ? { paymentStatus: 'Paid' as const } : {}),
+                  }
+                : o
+            )
+          : []
+      );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.orders });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.order(variables.orderId) });
       queryClient.invalidateQueries({ queryKey: ['seller'] });

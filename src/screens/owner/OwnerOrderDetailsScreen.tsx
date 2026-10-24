@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import COLORS from '../../constants/colors';
@@ -13,8 +14,9 @@ import Header from '../../components/Header';
 import Badge from '../../components/Badge';
 import Button from '../../components/Button';
 import { useOrders } from '../../context/OrderContext';
-import { useOrderMutations } from '../../api/queries';
+import { useOrderMutations, useOrderTrackingQuery } from '../../api/queries';
 import { OrderStage } from '../../components/Timeline';
+import { useTranslation } from 'react-i18next';
 
 interface OwnerOrderDetailsScreenProps {
   navigation: any;
@@ -25,20 +27,36 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
   navigation,
   route,
 }) => {
-  const { orderId } = route.params;
+  const { t } = useTranslation();
+  const orderId = route.params?.orderId || route.params?.order?.id;
+  const passedOrder = route.params?.order;
   const { getOrderById, updateOrderStatus: updateOrderStatusLocal } = useOrders();
   const { updateOrderStatus: updateOrderStatusMutation } = useOrderMutations();
 
-  const order = getOrderById(orderId);
+  const { data: serverOrder, isLoading: isQueryLoading } = useOrderTrackingQuery(orderId);
+  const localOrder = getOrderById(orderId);
+  const order = serverOrder || passedOrder || localOrder;
+
   const [selectedNewStatus, setSelectedNewStatus] = useState<OrderStage | 'cancelled' | null>(
     null
   );
   const [updating, setUpdating] = useState(false);
 
+  if (isQueryLoading && !order) {
+    return (
+      <View style={styles.container}>
+        <Header showBack onBack={() => navigation.goBack()} title={t('common.loading')} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.blue} />
+        </View>
+      </View>
+    );
+  }
+
   if (!order) {
     return (
       <View style={styles.container}>
-        <Header showBack onBack={() => navigation.goBack()} title="ORDER NOT FOUND" />
+        <Header showBack onBack={() => navigation.goBack()} title={t('orders.empty')} />
         <View style={styles.emptyContent}>
           <Text style={styles.emptyText}>Order record #{orderId} not found.</Text>
         </View>
@@ -55,7 +73,7 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
         status: selectedNewStatus,
       });
     } catch (e) {
-      console.log('Server status update failed, saving locally');
+      console.log('Server status update fallback');
     }
     await updateOrderStatusLocal(order.id, selectedNewStatus);
     setUpdating(false);
@@ -63,18 +81,18 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
   };
 
   const statusOptions: { key: OrderStage | 'cancelled'; label: string }[] = [
-    { key: 'confirmed', label: 'Confirm Order' },
-    { key: 'processing', label: 'Mark Processing' },
-    { key: 'out_for_delivery', label: 'Out for Delivery' },
-    { key: 'delivered', label: 'Mark Delivered' },
-    { key: 'cancelled', label: 'Cancel Order' },
+    { key: 'confirmed', label: t('common.confirmOrderBtn') },
+    { key: 'processing', label: t('common.markProcessingBtn') },
+    { key: 'out_for_delivery', label: t('common.outForDeliveryBtn') },
+    { key: 'delivered', label: t('common.markDeliveredBtn') },
+    { key: 'cancelled', label: t('common.cancelOrderBtn') },
   ];
 
   return (
     <View style={styles.container}>
       <Header
-        title={`MANAGE #${order.id}`}
-        subtitle="Customer Order Fulfillment"
+        title={`#${order.id}`}
+        subtitle={t('common.fulfillmentPipeline')}
         showBack
         onBack={() => navigation.goBack()}
       />
@@ -83,7 +101,7 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
         {/* Status Badge Banner */}
         <View style={styles.statusBanner}>
           <View>
-            <Text style={styles.statusBannerTitle}>Current Order State</Text>
+            <Text style={styles.statusBannerTitle}>{t('common.orderState')}</Text>
             <Text style={styles.statusBannerDate}>
               Placed: {new Date(order.createdAt).toLocaleString()}
             </Text>
@@ -97,46 +115,46 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
 
         {/* Customer & Address Details */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Customer Delivery Info</Text>
+          <Text style={styles.cardTitle}>{t('common.customerDeliveryInfo')}</Text>
           <View style={styles.divider} />
 
           <View style={styles.row}>
-            <Text style={styles.label}>Recipient Name:</Text>
+            <Text style={styles.label}>{t('common.recipientName')}</Text>
             <Text style={styles.value}>{order.customerName}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Phone Number:</Text>
+            <Text style={styles.label}>{t('auth.phoneNumber')}:</Text>
             <Text style={styles.value}>{order.customerPhone}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Delivery Address:</Text>
+            <Text style={styles.label}>{t('checkout.address')}:</Text>
             <Text style={styles.value}>{order.deliveryAddress}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>District:</Text>
+            <Text style={styles.label}>{t('checkout.district')}:</Text>
             <Text style={styles.value}>{order.district}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Payment Method:</Text>
+            <Text style={styles.label}>{t('checkout.paymentMethod')}:</Text>
             <Text style={styles.value}>{order.paymentMethod}</Text>
           </View>
 
           <View style={styles.row}>
-            <Text style={styles.label}>Payment Status:</Text>
+            <Text style={styles.label}>{t('orders.status')}:</Text>
             <Badge label={order.paymentStatus} variant="yellow" size="small" />
           </View>
         </View>
 
         {/* Purchased Items List */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Purchased Items</Text>
+          <Text style={styles.cardTitle}>{t('common.purchasedItems')}</Text>
           <View style={styles.divider} />
 
-          {order.items.map((item, idx) => (
+          {(order.items || []).map((item: any, idx: number) => (
             <View key={idx} style={styles.itemRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName}>{item.name}</Text>
@@ -153,28 +171,28 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal:</Text>
+            <Text style={styles.summaryLabel}>{t('cart.subtotal')}:</Text>
             <Text style={styles.summaryVal}>{order.subtotal.toLocaleString()} RWF</Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery (Rwamagana):</Text>
+            <Text style={styles.summaryLabel}>{t('cart.deliveryFee')}:</Text>
             <Text style={styles.summaryVal}>
               {order.deliveryFee === 0 ? 'FREE' : `${order.deliveryFee.toLocaleString()} RWF`}
             </Text>
           </View>
 
           <View style={[styles.summaryRow, styles.grandTotalRow]}>
-            <Text style={styles.grandLabel}>Total to Collect:</Text>
+            <Text style={styles.grandLabel}>{t('cart.total')}:</Text>
             <Text style={styles.grandVal}>{order.total.toLocaleString()} RWF</Text>
           </View>
         </View>
 
         {/* Permitted Status Transitions */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Transition Status</Text>
+          <Text style={styles.cardTitle}>{t('common.changeStatus')}</Text>
           <Text style={styles.cardSub}>
-            Update this customer's order stage in the live tracking system:
+            {t('common.selectNewStatus')}:
           </Text>
           <View style={styles.actionsGrid}>
             {statusOptions.map((opt) => {
@@ -216,19 +234,19 @@ export const OwnerOrderDetailsScreen: React.FC<OwnerOrderDetailsScreenProps> = (
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Confirm Status Change</Text>
+            <Text style={styles.modalTitle}>{t('common.confirm')}</Text>
             <Text style={styles.modalDesc}>
               Change status of order #{order.id} to "{selectedNewStatus?.toUpperCase()}"?
             </Text>
             <View style={styles.modalActions}>
               <Button
-                title="Cancel"
+                title={t('common.cancel')}
                 variant="outline"
                 onPress={() => setSelectedNewStatus(null)}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Update"
+                title={t('common.confirm')}
                 variant="accent"
                 loading={updating}
                 onPress={handleConfirmStatusChange}
@@ -247,9 +265,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: {
-    padding: 16,
+    padding: 14,
     paddingBottom: 40,
+  },
+  emptyContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.blue,
+    fontWeight: '700',
   },
   statusBanner: {
     backgroundColor: COLORS.white,
@@ -257,10 +291,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 12,
     padding: 14,
+    marginBottom: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   statusBannerTitle: {
     fontSize: 14,
@@ -268,7 +302,7 @@ const styles = StyleSheet.create({
     color: COLORS.blue,
   },
   statusBannerDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.blue,
     opacity: 0.8,
     marginTop: 2,
@@ -278,27 +312,31 @@ const styles = StyleSheet.create({
     borderColor: COLORS.blue,
     borderWidth: 2,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: 14,
+    marginBottom: 14,
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '900',
     color: COLORS.blue,
+    textTransform: 'uppercase',
   },
   cardSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.blue,
-    opacity: 0.85,
-    marginTop: 4,
-    marginBottom: 12,
+    opacity: 0.8,
+    marginVertical: 6,
   },
   divider: {
     height: 1.5,
     backgroundColor: COLORS.blue,
+    opacity: 0.2,
     marginVertical: 10,
   },
   row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   label: {
@@ -307,10 +345,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   value: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.blue,
     fontWeight: '800',
-    marginTop: 2,
+    maxWidth: '65%',
+    textAlign: 'right',
   },
   itemRow: {
     flexDirection: 'row',
@@ -319,7 +358,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: COLORS.blue,
   },
@@ -327,16 +366,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.blue,
     opacity: 0.8,
+    marginTop: 2,
   },
   itemTotal: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
     color: COLORS.blue,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   summaryLabel: {
     fontSize: 12,
@@ -350,9 +390,9 @@ const styles = StyleSheet.create({
   },
   grandTotalRow: {
     marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.blue,
+    paddingTop: 8,
+    borderTopWidth: 1.5,
+    borderColor: COLORS.blue,
   },
   grandLabel: {
     fontSize: 14,
@@ -360,11 +400,12 @@ const styles = StyleSheet.create({
     color: COLORS.blue,
   },
   grandVal: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
     color: COLORS.blue,
   },
   actionsGrid: {
+    marginTop: 8,
     gap: 8,
   },
   statusActionBtn: {
@@ -373,39 +414,40 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 8,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
   statusActionBtnCurrent: {
     backgroundColor: COLORS.yellow,
     borderColor: COLORS.blue,
-    opacity: 0.7,
+    borderWidth: 2,
   },
   statusActionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: COLORS.blue,
   },
   statusActionTextCurrent: {
-    color: COLORS.blue,
+    fontWeight: '900',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(21, 101, 192, 0.4)',
-    alignItems: 'center',
+    backgroundColor: 'rgba(21, 101, 192, 0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
   modalBox: {
-    width: '100%',
     backgroundColor: COLORS.white,
     borderColor: COLORS.blue,
-    borderWidth: 3,
+    borderWidth: 2,
     borderRadius: 14,
     padding: 20,
-    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: COLORS.blue,
     marginBottom: 8,
@@ -413,24 +455,11 @@ const styles = StyleSheet.create({
   modalDesc: {
     fontSize: 13,
     color: COLORS.blue,
-    textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  emptyContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.blue,
+    gap: 10,
   },
 });
 

@@ -3,8 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import COLORS from '../constants/colors';
 import { useCart } from '../context/CartContext';
+import { useTranslation } from 'react-i18next';
 
 // Client Screens
 import HomeScreen from '../screens/client/HomeScreen';
@@ -85,13 +87,15 @@ function ProfileStackNavigator() {
 
 export const ClientNavigator: React.FC = () => {
   const { itemCount } = useCart();
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       initialRouteName="HomeTab"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { paddingBottom: Math.max(insets.bottom, 6) + 6, height: 60 + Math.max(insets.bottom, 0) }],
         tabBarActiveTintColor: COLORS.blue,
         tabBarInactiveTintColor: COLORS.blue,
         tabBarLabelStyle: styles.tabLabel,
@@ -128,27 +132,27 @@ export const ClientNavigator: React.FC = () => {
       <Tab.Screen
         name="HomeTab"
         component={HomeStackNavigator}
-        options={{ tabBarLabel: 'Home' }}
+        options={{ tabBarLabel: t('nav.home') }}
       />
       <Tab.Screen
         name="CategoriesTab"
         component={CategoryStackNavigator}
-        options={{ tabBarLabel: 'Categories' }}
+        options={{ tabBarLabel: t('nav.categories') }}
       />
       <Tab.Screen
         name="CartTab"
         component={CartStackNavigator}
-        options={{ tabBarLabel: 'Cart' }}
+        options={{ tabBarLabel: t('nav.cart') }}
       />
       <Tab.Screen
         name="OrdersTab"
         component={OrdersStackNavigator}
-        options={{ tabBarLabel: 'Orders' }}
+        options={{ tabBarLabel: t('nav.orders') }}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStackNavigator}
-        options={{ tabBarLabel: 'Profile' }}
+        options={{ tabBarLabel: t('nav.profile') }}
       />
     </Tab.Navigator>
   );
@@ -156,11 +160,9 @@ export const ClientNavigator: React.FC = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 64,
     backgroundColor: COLORS.white,
     borderTopWidth: 2,
     borderTopColor: COLORS.blue,
-    paddingBottom: 6,
     paddingTop: 6,
   },
   tabLabel: {

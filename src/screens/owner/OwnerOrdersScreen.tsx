@@ -14,12 +14,14 @@ import Badge from '../../components/Badge';
 import { OrderCardSkeleton } from '../../components/Skeleton';
 import { useOrders, Order } from '../../context/OrderContext';
 import { useOrdersQuery } from '../../api/queries';
+import { useTranslation } from 'react-i18next';
 
 interface OwnerOrdersScreenProps {
   navigation: any;
 }
 
 export const OwnerOrdersScreen: React.FC<OwnerOrdersScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { orders: localOrders } = useOrders();
   const { data: serverOrders, isLoading, isRefetching, refetch } = useOrdersQuery();
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -40,7 +42,7 @@ export const OwnerOrdersScreen: React.FC<OwnerOrdersScreenProps> = ({ navigation
         style={styles.card}
         activeOpacity={0.8}
         onPress={() =>
-          navigation.navigate('OwnerOrderDetails', { orderId: item.id })
+          navigation.navigate('OwnerOrderDetails', { orderId: item.id, order: item })
         }
       >
         <View style={styles.headerRow}>
@@ -84,7 +86,7 @@ export const OwnerOrdersScreen: React.FC<OwnerOrdersScreenProps> = ({ navigation
         </View>
 
         <View style={styles.viewDetailsBtn}>
-          <Text style={styles.viewDetailsText}>VIEW DETAILS & UPDATE STATUS ›</Text>
+          <Text style={styles.viewDetailsText}>{t('common.viewDetails').toUpperCase()} ›</Text>
         </View>
       </TouchableOpacity>
     );
@@ -92,14 +94,17 @@ export const OwnerOrdersScreen: React.FC<OwnerOrdersScreenProps> = ({ navigation
 
   return (
     <View style={styles.container}>
-      <Header title="ORDERS MANAGEMENT" subtitle="Fulfillment Pipeline" />
+      <Header
+        title={t('common.ordersManagement')}
+        subtitle={t('common.fulfillmentPipeline')}
+      />
 
       {/* Status Filter Tabs */}
       <View style={styles.tabsRow}>
         {[
-          { key: 'all', label: 'All Orders' },
-          { key: 'pending', label: 'Pending' },
-          { key: 'delivered', label: 'Delivered' },
+          { key: 'all', label: t('common.all') },
+          { key: 'pending', label: t('owner.pendingOrders') },
+          { key: 'delivered', label: t('owner.deliveredOrders') },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}

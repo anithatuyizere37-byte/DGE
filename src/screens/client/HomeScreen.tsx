@@ -111,11 +111,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {/* Greeting Banner */}
             <View style={styles.greetingBar}>
               <Text style={styles.greetingText}>
-                Muraho, {user?.fullName || 'Valued Customer'}!
+                {t('home.greeting')}, {user?.fullName || t('common.guestShopper')}!
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="location-sharp" size={13} color={COLORS.blue} style={{ marginRight: 3 }} />
-                <Text style={styles.shopLocationText}>Rwamagana Retail Shop</Text>
+                <Text style={styles.shopLocationText}>{t('common.location')}</Text>
               </View>
             </View>
 
@@ -137,7 +137,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* Promotional Banner (White, Blue, Yellow only) */}
         <View style={styles.promoBanner}>
           <View style={styles.promoTag}>
-            <Text style={styles.promoTagText}>SPECIAL OFFER</Text>
+            <Text style={styles.promoTagText}>{t('common.specialOffer')}</Text>
           </View>
           <Text style={styles.promoTitle}>{t('home.promoBannerTitle')}</Text>
           <Text style={styles.promoSubtitle}>{t('home.promoBannerSubtitle')}</Text>
@@ -145,7 +145,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             style={styles.promoButton}
             onPress={() => handleCategoryPress('Clothes')}
           >
-            <Text style={styles.promoButtonText}>EXPLORE RWAMAGANA DEALS ›</Text>
+            <Text style={styles.promoButtonText}>{t('common.exploreDeals')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -167,7 +167,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 onPress={() => handleCategoryPress(cat)}
               >
                 <View style={styles.catDot} />
-                <Text style={styles.categoryChipText}>{cat}</Text>
+                <Text style={styles.categoryChipText}>{t(`categories.${cat}` as any, cat)}</Text>
               </TouchableOpacity>
             ))}
         </ScrollView>

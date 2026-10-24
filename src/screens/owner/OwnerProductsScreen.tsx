@@ -17,12 +17,17 @@ import Badge from '../../components/Badge';
 import Button from '../../components/Button';
 import { useProducts, Product } from '../../context/ProductContext';
 import { useSellerInventoryQuery, useProductMutations } from '../../api/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../../api/queryClient';
+import { useTranslation } from 'react-i18next';
 
 interface OwnerProductsScreenProps {
   navigation: any;
 }
 
 export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { products: localProducts, deleteProduct: deleteProductLocal } = useProducts();
   const { data: serverProducts, isRefetching, refetch } = useSellerInventoryQuery();
   const { deleteProduct: deleteMutation } = useProductMutations();
@@ -40,13 +45,21 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
 
   const confirmDelete = async () => {
     if (deleteTarget) {
+      const targetId = deleteTarget.id;
+      // Optimistic instant UI update
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.sellerInventory, (old) =>
+        old ? old.filter((p) => p.id !== targetId) : []
+      );
+      queryClient.setQueryData<Product[]>(QUERY_KEYS.products, (old) =>
+        old ? old.filter((p) => p.id !== targetId) : []
+      );
+      await deleteProductLocal(targetId);
+      setDeleteTarget(null);
       try {
-        await deleteMutation.mutateAsync(deleteTarget.id);
+        await deleteMutation.mutateAsync(targetId);
       } catch (e) {
         console.log('Delete fallback to local state');
       }
-      await deleteProductLocal(deleteTarget.id);
-      setDeleteTarget(null);
     }
   };
 
@@ -60,7 +73,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
           <View style={styles.categoryRow}>
             <Text style={styles.category}>{item.category}</Text>
             <Badge
-              label={isOutOfStock ? 'OUT OF STOCK' : item.stock <= 5 ? 'LOW STOCK' : 'IN STOCK'}
+              label={isOutOfStock ? t('home.outOfStock').toUpperCase() : item.stock <= 5 ? t('common.stockWarnings').toUpperCase() : t('home.inStock').toUpperCase()}
               variant={isOutOfStock ? 'outline' : 'yellow'}
               size="small"
             />
@@ -68,7 +81,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
 
           <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.price}>{item.price.toLocaleString()} RWF</Text>
-          <Text style={styles.stock}>Inventory: {item.stock} units</Text>
+          <Text style={styles.stock}>{t('common.unitsInStore')} {item.stock} {t('common.units')}</Text>
 
           {/* Action Buttons */}
           <View style={styles.actionsRow}>
@@ -80,7 +93,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="pencil" size={12} color={COLORS.blue} style={{ marginRight: 4 }} />
-                <Text style={styles.editBtnText}>EDIT</Text>
+                <Text style={styles.editBtnText}>{t('common.edit').toUpperCase()}</Text>
               </View>
             </TouchableOpacity>
 
@@ -90,7 +103,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="trash-outline" size={12} color={COLORS.blue} style={{ marginRight: 4 }} />
-                <Text style={styles.deleteBtnText}>DELETE</Text>
+                <Text style={styles.deleteBtnText}>{t('common.delete').toUpperCase()}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -102,8 +115,8 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
   return (
     <View style={styles.container}>
       <Header
-        title="PRODUCT CATALOG"
-        subtitle="Manage Shop Items"
+        title={t('common.inventoryCatalog')}
+        subtitle={t('common.manageCatalog')}
         rightAction={
           <TouchableOpacity
             style={styles.addHeaderBtn}
@@ -111,7 +124,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="add" size={16} color={COLORS.blue} style={{ marginRight: 2 }} />
-              <Text style={styles.addHeaderText}>ADD</Text>
+              <Text style={styles.addHeaderText}>{t('common.save') === 'Bika' ? 'ONGERA' : t('common.save') === 'Enregistrer' ? 'AJOUTER' : 'ADD'}</Text>
             </View>
           </TouchableOpacity>
         }
@@ -122,7 +135,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
         <Ionicons name="search" size={16} color={COLORS.blue} style={{ marginRight: 6 }} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name, category, or SKU..."
+          placeholder={t('common.searchPlaceholderCatalog')}
           placeholderTextColor={COLORS.blue}
           value={search}
           onChangeText={setSearch}
@@ -151,7 +164,7 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>No matching products</Text>
+            <Text style={styles.emptyTitle}>{t('orders.empty')}</Text>
           </View>
         }
       />
@@ -165,19 +178,19 @@ export const OwnerProductsScreen: React.FC<OwnerProductsScreenProps> = ({ naviga
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Delete Product?</Text>
+            <Text style={styles.modalTitle}>{t('common.deleteConfirmTitle')}</Text>
             <Text style={styles.modalText}>
-              Are you sure you want to remove "{deleteTarget?.name}" from D&G Rwamagana catalog?
+              {t('common.deleteConfirmText')} ({deleteTarget?.name})
             </Text>
             <View style={styles.modalButtons}>
               <Button
-                title="Cancel"
+                title={t('common.cancel')}
                 variant="outline"
                 onPress={() => setDeleteTarget(null)}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Delete"
+                title={t('common.delete')}
                 variant="accent"
                 onPress={confirmDelete}
                 style={{ flex: 1 }}
@@ -219,21 +232,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
   searchInput: {
     flex: 1,
     color: COLORS.blue,
     fontSize: 13,
     fontWeight: '600',
-  },
-  clearSearch: {
-    fontSize: 14,
-    color: COLORS.blue,
-    fontWeight: '900',
-    padding: 4,
   },
   listContent: {
     paddingHorizontal: 14,
@@ -249,12 +252,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   image: {
-    width: 90,
-    height: 100,
+    width: 80,
+    height: 80,
     borderRadius: 8,
-    backgroundColor: COLORS.white,
     borderColor: COLORS.blue,
     borderWidth: 1,
+    backgroundColor: COLORS.white,
   },
   info: {
     flex: 1,
@@ -268,41 +271,43 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 10,
-    fontWeight: '800',
     color: COLORS.blue,
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
   title: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.blue,
-    marginVertical: 2,
-  },
-  price: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '900',
     color: COLORS.blue,
+    marginTop: 2,
+  },
+  price: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.blue,
+    marginTop: 2,
   },
   stock: {
     fontSize: 11,
     color: COLORS.blue,
-    opacity: 0.85,
+    fontWeight: '600',
+    marginTop: 2,
   },
   actionsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 6,
+    marginTop: 8,
   },
   editBtn: {
     backgroundColor: COLORS.yellow,
     borderColor: COLORS.blue,
     borderWidth: 1.5,
     borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   editBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '900',
     color: COLORS.blue,
   },
@@ -311,41 +316,41 @@ const styles = StyleSheet.create({
     borderColor: COLORS.blue,
     borderWidth: 1.5,
     borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   deleteBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '900',
     color: COLORS.blue,
   },
   emptyContainer: {
+    padding: 40,
     alignItems: 'center',
-    paddingVertical: 40,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
     color: COLORS.blue,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(21, 101, 192, 0.4)',
-    alignItems: 'center',
+    backgroundColor: 'rgba(21, 101, 192, 0.5)',
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
+    padding: 24,
   },
   modalBox: {
-    width: '100%',
     backgroundColor: COLORS.white,
     borderColor: COLORS.blue,
-    borderWidth: 3,
+    borderWidth: 2,
     borderRadius: 14,
     padding: 20,
-    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: COLORS.blue,
     marginBottom: 8,
@@ -353,13 +358,12 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: 13,
     color: COLORS.blue,
-    textAlign: 'center',
-    marginBottom: 18,
+    lineHeight: 18,
+    marginBottom: 16,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
-    width: '100%',
   },
 });
 
