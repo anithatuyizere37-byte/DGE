@@ -2,13 +2,15 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Standard development URL for Android emulator (10.0.2.2) and iOS/web (localhost)
+// Production Render backend URL with local fallback
+const PRODUCTION_RENDER_URL = 'https://dge-ono9.onrender.com/api';
 const DEFAULT_LOCAL_URL =
   Platform.OS === 'android'
     ? 'http://10.0.2.2:5000/api'
     : 'http://localhost:5000/api';
 
-export const API_BASE_URL = process.env.API_URL || DEFAULT_LOCAL_URL;
+export const API_BASE_URL =
+  process.env.API_URL || PRODUCTION_RENDER_URL || DEFAULT_LOCAL_URL;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
