@@ -32,6 +32,23 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// ─── Root Route ─────────────────────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.json({
+    message: 'Welcome to D&G E-Commerce API',
+    shop: 'D&G Rwamagana, Rwanda',
+    status: 'online',
+    health: '/health',
+    endpoints: {
+      auth: '/api/auth',
+      products: '/api/products',
+      categories: '/api/categories',
+      orders: '/api/orders',
+      reports: '/api/reports',
+    },
+  });
+});
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', async (req, res) => {
   const health = await db.checkHealth();
