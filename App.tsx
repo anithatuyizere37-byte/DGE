@@ -1,45 +1,50 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useEffect } from 'react';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, asyncStoragePersister, setupQueryFocusManager } from './src/api/queryClient';
+import COLORS from './src/constants/colors';
+import './src/translations/i18n';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+// Context Providers
+import { AuthProvider } from './src/context/AuthContext';
+import { ProductProvider } from './src/context/ProductContext';
+import { CartProvider } from './src/context/CartContext';
+import { OrderProvider } from './src/context/OrderContext';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+// Root Navigation
+import RootNavigator from './src/navigation/RootNavigator';
+
+function App(): React.JSX.Element {
+  useEffect(() => {
+    const cleanupFocus = setupQueryFocusManager();
+    return () => {
+      cleanupFocus();
+    };
+  }, []);
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <StatusBar barStyle="dark-content" />
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: asyncStoragePersister,
+          maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        }}
+      >
+        <AuthProvider>
+          <ProductProvider>
+            <CartProvider>
+              <OrderProvider>
+                <RootNavigator />
+              </OrderProvider>
+            </CartProvider>
+          </ProductProvider>
+        </AuthProvider>
+      </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
